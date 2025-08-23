@@ -27,7 +27,7 @@ final class SingleImageViewController: UIViewController {
 
     private func layoutImage() {
         imageView.frame = scrollView.bounds
-        imageView.contentMode = .scaleToFill 
+        imageView.contentMode = .scaleAspectFit
         scrollView.contentSize = imageView.frame.size
         updateContentInset()
     }

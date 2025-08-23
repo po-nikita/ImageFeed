@@ -43,10 +43,10 @@ extension ImagesListViewController: UITableViewDataSource {
         return photosName.count
     }
     
-    func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell { // метод создания ячейки
-        let cell = tableView.dequeueReusableCell(withIdentifier: ImagesListCell.reuseIdentifier, for: indexPath) // метод из всех ячеек возвращает ячейку по заранее заданным параметрам
+    func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
+        let cell = tableView.dequeueReusableCell(withIdentifier: ImagesListCell.reuseIdentifier, for: indexPath)
         
-        guard let imageListCell = cell as? ImagesListCell else { // приведение типов
+        guard let imageListCell = cell as? ImagesListCell else { 
             return UITableViewCell()
         }
         configCell(for: imageListCell, with: indexPath)

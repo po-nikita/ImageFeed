@@ -8,6 +8,7 @@ final class ProfileViewController: UIViewController {
     private var descriptionLabel = UILabel()
     private let logoutButton = UIButton(type: .custom)
     
+    
     override func viewDidLoad() {
         super.viewDidLoad()
         setupProfileImage()
