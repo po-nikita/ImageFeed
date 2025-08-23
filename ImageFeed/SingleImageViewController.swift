@@ -20,6 +20,16 @@ final class SingleImageViewController: UIViewController {
         scrollView.minimumZoomScale = 1
         scrollView.maximumZoomScale = 3
 
+        imageView.translatesAutoresizingMaskIntoConstraints = false
+        NSLayoutConstraint.activate([
+                imageView.topAnchor.constraint(equalTo: scrollView.topAnchor),
+                imageView.leadingAnchor.constraint(equalTo: scrollView.leadingAnchor),
+                imageView.trailingAnchor.constraint(equalTo: scrollView.trailingAnchor),
+                imageView.bottomAnchor.constraint(equalTo: scrollView.bottomAnchor),
+                imageView.widthAnchor.constraint(equalTo: scrollView.widthAnchor),
+                imageView.heightAnchor.constraint(equalTo: scrollView.heightAnchor)
+            ])
+        
         guard let image else { return }
         imageView.image = image
         layoutImage()
