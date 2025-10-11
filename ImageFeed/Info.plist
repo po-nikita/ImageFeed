@@ -4,6 +4,7 @@
 <dict>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
+        
 		<key>UIApplicationSupportsMultipleScenes</key>
 		<false/>
 		<key>UISceneConfigurations</key>
@@ -17,6 +18,11 @@
 					<string>$(PRODUCT_MODULE_NAME).SceneDelegate</string>
 					<key>UISceneStoryboardFile</key>
 					<string>Main</string>
+                    <key>NSAppTransportSecurity</key>
+                    <dict>
+                        <key>NSAllowsArbitraryLoads</key>
+                    <true/>
+                    </dict>
 				</dict>
 			</array>
 		</dict>
