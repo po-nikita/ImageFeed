@@ -6,25 +6,12 @@ final class SplashViewController: UIViewController {
     
     override func viewDidLoad() {
         super.viewDidLoad()
-        NotificationCenter.default.addObserver(self, selector: #selector(didAuthenticateNotification), name: .didAuthenticate, object: nil)
-    }
-    
-    @objc private func didAuthenticateNotification() {
-        if storage.token != nil {
-            switchTabBarController()
-        } else {
-            print("Ошибка. Отстутствует токен.")
-        }
     }
     
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
         
-        if storage.token != nil {
-            switchTabBarController()
-        } else {
-            performSegue(withIdentifier: showAuthenticationSegueIdentifier, sender: nil)
-        }
+        checkAuthentication()
     }
     
     override func viewWillAppear(_ animated: Bool) {
@@ -36,8 +23,13 @@ final class SplashViewController: UIViewController {
         .lightContent
     }
     
-    deinit {
-        NotificationCenter.default.removeObserver(self, name: .didAuthenticate, object: nil)
+    
+    private func checkAuthentication() {
+        if storage.token != nil {
+            switchTabBarController()
+        } else {
+            performSegue(withIdentifier: showAuthenticationSegueIdentifier, sender: nil)
+        }
     }
     
     private func switchTabBarController() {
@@ -75,15 +67,8 @@ extension SplashViewController {
 extension SplashViewController: AuthViewControllerDelegate {
     func didAuthenticate(_ vc: AuthViewController) {
         vc.dismiss(animated: true) { [weak self] in
-            guard let self = self else {return}
-            if self.storage.token != nil {
-                self.switchTabBarController()
-            } else {
-                print("Ошибка. Отсутствует токен после авторизации.")
-            }}
+            self?.checkAuthentication()
+        }
     }
 }
 
-extension Notification.Name {
-    static let didAuthenticate = Notification.Name("didAuthenticate")
-}

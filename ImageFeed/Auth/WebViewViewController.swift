@@ -94,11 +94,31 @@ extension WebViewViewController: WKNavigationDelegate {
     ) {
         if let code = code(from: navigationAction) {
             delegate?.webViewViewController(self, didAuthenticateWithCode: code)
+            
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                self.switchToTabBarController()
+            }
+            
             decisionHandler(.cancel)
         } else {
             decisionHandler(.allow)
         }
     }
+    
+    private func switchToTabBarController() {
+        guard let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+              let window = windowScene.windows.first else {
+            assertionFailure("Invalid window configuration")
+            return
+        }
+        
+        let tabBarController = UIStoryboard(name: "Main", bundle: .main)
+            .instantiateViewController(withIdentifier: "TabBarViewController")
+        
+        window.rootViewController = tabBarController
+        window.makeKeyAndVisible()
+    }
+}
 
 
     // MARK: - Извлечение кода авторизации
@@ -115,4 +135,4 @@ extension WebViewViewController: WKNavigationDelegate {
             return nil
         }
     }
-}
+
