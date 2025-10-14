@@ -12,45 +12,43 @@ final class OAuth2Service {
     func fetchOAuthToken(code: String, completion: @escaping (Result<String, Error>) -> Void) {
         guard let request = makeOAuthTokenRequest(code: code) else {
             print("Ошибка: не удалось создать URLRequest")
-            completion(.failure(NetworkErrors.invalidRequest))
+            DispatchQueue.main.async {
+                completion(.failure(NetworkErrors.invalidRequest))
+            }
             return
         }
 
         let task = URLSession.shared.dataTask(with: request) { [weak self] data, response, error in
-            guard let self = self else { return }
-
+            
+            let result: Result<String, Error>
+            
             if let error = error {
                 print("Ошибка сети: \(error.localizedDescription)")
-                completion(.failure(error))
-                return
-            }
-
-            guard let httpResponse = response as? HTTPURLResponse else {
-                print("Некорректный ответ от сервера.")
-                completion(.failure(NetworkErrors.invalidResponse))
-                return
-            }
-
-            guard (200...299).contains(httpResponse.statusCode) else {
+                result = .failure(error)
+            } else if let httpResponse = response as? HTTPURLResponse, !(200...299).contains(httpResponse.statusCode) {
                 print("Ошибка: неверный статус ответа \(httpResponse.statusCode)")
-                completion(.failure(NetworkErrors.invalidStatusCode(httpResponse.statusCode)))
-                return
-            }
-
-            guard let data = data else {
+                result = .failure(NetworkErrors.invalidStatusCode(httpResponse.statusCode))
+            } else if let data = data {
+                do {
+                    let responseBody = try self?.decoder.decode(OAuthTokenResponseBody.self, from: data)
+                    if let accessToken = responseBody?.accessToken {
+                        OAuth2TokenStorage.shared.token = accessToken
+                        print("Токен успешно получен: \(accessToken)")
+                        result = .success(accessToken)
+                    } else {
+                        result = .failure(NetworkErrors.noData)
+                    }
+                } catch {
+                    print("Ошибка декодирования: \(error)")
+                    result = .failure(NetworkErrors.decodingError(error))
+                }
+            } else {
                 print("Нет данных в ответе.")
-                completion(.failure(NetworkErrors.noData))
-                return
+                result = .failure(NetworkErrors.noData)
             }
-
-            do {
-                let responseBody = try self.decoder.decode(OAuthTokenResponseBody.self, from: data)
-                OAuth2TokenStorage.shared.token = responseBody.accessToken
-                print("Токен успешно получен: \(responseBody.accessToken)")
-                completion(.success(responseBody.accessToken))
-            } catch {
-                print("Ошибка декодирования: \(error)")
-                completion(.failure(NetworkErrors.decodingError(error)))
+            
+            DispatchQueue.main.async {
+                completion(result)
             }
         }
         task.resume()
@@ -86,7 +84,7 @@ extension OAuth2Service {
             .joined(separator: "&")
 
         request.httpBody = stringBody.data(using: .utf8)
-        print("🧾 Тело запроса: \(stringBody)")
+        print("Тело запроса: \(stringBody)")
         return request
     }
 }

@@ -45,19 +45,12 @@ extension AuthViewController: WebViewViewControllerDelegate {
         OAuth2Service.shared.fetchOAuthToken(code: code) { [weak self] result in
             switch result {
             case .success(let token):
-                print(" Токен успешно получен: \(token)")
-                DispatchQueue.main.async {
-                    guard let self = self else { return }
-                    self.delegate?.didAuthenticate(self)
-                }
+                guard let self = self else { return }
+                self.delegate?.didAuthenticate(self)
             case .failure(let error):
-                print(" Ошибка при получении токена: \(error)")
-                DispatchQueue.main.async {
-                    guard let self = self else { return }
-                    let alert = UIAlertController(title: "Error", message: error.localizedDescription, preferredStyle: .alert)
-                    alert.addAction(UIAlertAction(title: "Ok", style: .default))
-                    self.present(alert, animated: true)
-                }
+                let alert = UIAlertController(title: "Error", message: error.localizedDescription, preferredStyle: .alert)
+                alert.addAction(UIAlertAction(title: "Ok", style: .default))
+                self?.present(alert, animated: true)
             }
         }
     }
@@ -65,6 +58,3 @@ extension AuthViewController: WebViewViewControllerDelegate {
     func webViewViewControllerDidCancel(_ vc: WebViewViewController) {
     }
 }
-
-
-
