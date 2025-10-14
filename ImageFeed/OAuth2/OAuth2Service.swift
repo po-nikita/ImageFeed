@@ -62,33 +62,29 @@ extension OAuth2Service {
             return nil
         }
         
+        var urlComponents = URLComponents()
+        urlComponents.queryItems = [
+            URLQueryItem(name: "client_id", value: Constants.accessKey),
+            URLQueryItem(name: "client_secret", value: Constants.secretKey),
+            URLQueryItem(name: "redirect_uri", value: Constants.redirectURI),
+            URLQueryItem(name: "code", value: code),
+            URLQueryItem(name: "grant_type", value: "authorization_code")
+        ]
+        
+        guard let bodyData = urlComponents.query?.data(using: .utf8) else {
+            print("Ошибка: не удалось создать тело запроса")
+            return nil
+        }
+        
         var request = URLRequest(url: url)
         request.setMethod(.post)
         request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
+        request.httpBody = bodyData
         
-        let params: [String: String] = [
-            "client_id": Constants.accessKey,
-            "client_secret": Constants.secretKey,
-            "redirect_uri": Constants.redirectURI,
-            "code": code,
-            "grant_type": "authorization_code"
-        ]
-        
-        let stringBody = params
-            .map { key, value in
-                let allowed = CharacterSet.alphanumerics.union(.init(charactersIn: "-._~"))
-                let k = key.addingPercentEncoding(withAllowedCharacters: allowed) ?? key
-                let v = value.addingPercentEncoding(withAllowedCharacters: allowed) ?? value
-                return "\(k)=\(v)"
-            }
-            .joined(separator: "&")
-
-        request.httpBody = stringBody.data(using: .utf8)
-        print("Тело запроса: \(stringBody)")
+        print("Тело запроса: \(urlComponents.query ?? "")")
         return request
     }
 }
-
 enum HTTPMethod: String {
     case get = "GET"
     case post = "POST"
