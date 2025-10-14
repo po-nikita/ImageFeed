@@ -26,14 +26,11 @@ final class WebViewViewController: UIViewController {
         webView.navigationDelegate = self
         webView.addObserver(self, forKeyPath: #keyPath(WKWebView.estimatedProgress), options: .new, context: nil)
         loadAuthView()
-        
     }
 
     deinit {
         webView.removeObserver(self, forKeyPath: #keyPath(WKWebView.estimatedProgress))
     }
-    
-    
 
     // MARK: - KVO
     override func observeValue(forKeyPath keyPath: String?,
@@ -82,6 +79,7 @@ final class WebViewViewController: UIViewController {
     // MARK: - Действие кнопки «Назад»
     @IBAction private func didTapBackButton(_ sender: Any) {
         delegate?.webViewViewControllerDidCancel(self)
+        dismiss(animated: true)
     }
 }
 
@@ -94,32 +92,11 @@ extension WebViewViewController: WKNavigationDelegate {
     ) {
         if let code = code(from: navigationAction) {
             delegate?.webViewViewController(self, didAuthenticateWithCode: code)
-            
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                self.switchToTabBarController()
-            }
-            
             decisionHandler(.cancel)
         } else {
             decisionHandler(.allow)
         }
     }
-    
-    private func switchToTabBarController() {
-        guard let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-              let window = windowScene.windows.first else {
-            assertionFailure("Invalid window configuration")
-            return
-        }
-        
-        let tabBarController = UIStoryboard(name: "Main", bundle: .main)
-            .instantiateViewController(withIdentifier: "TabBarViewController")
-        
-        window.rootViewController = tabBarController
-        window.makeKeyAndVisible()
-    }
-}
-
 
     // MARK: - Извлечение кода авторизации
     private func code(from navigationAction: WKNavigationAction) -> String? {
@@ -135,4 +112,4 @@ extension WebViewViewController: WKNavigationDelegate {
             return nil
         }
     }
-
+}
