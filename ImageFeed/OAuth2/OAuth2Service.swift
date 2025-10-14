@@ -9,27 +9,48 @@ final class OAuth2Service {
         return dec
     }()
     
-    func fetchOAuthToken(code: String, completion: @escaping(Result<String, Error>) -> Void){
+    func fetchOAuthToken(code: String, completion: @escaping (Result<String, Error>) -> Void) {
         guard let request = makeOAuthTokenRequest(code: code) else {
-            completion(.failure(NetworkError.invalidRequest))
+            print("Ошибка: не удалось создать URLRequest")
+            completion(.failure(NetworkErrors.invalidRequest))
             return
         }
-        
-        let task = URLSession.shared.data(for: request) { [weak self ] result in
-            switch result {
-            case .success(let data):
-                guard let self = self else {
-                    completion(.failure(NetworkErrors.invalidResponse))
-                    return
-                }
-                do {
-                    let responseBody = try self.decoder.decode(OAuthTokenResponseBody.self, from: data)
-                    OAuth2TokenStorage.shared.token = responseBody.accessToken
-                } catch {
-                    completion(.failure(NetworkErrors.decodingError(error)))
-                }
-            case .failure(let error):
+
+        let task = URLSession.shared.dataTask(with: request) { [weak self] data, response, error in
+            guard let self = self else { return }
+
+            if let error = error {
+                print("Ошибка сети: \(error.localizedDescription)")
                 completion(.failure(error))
+                return
+            }
+
+            guard let httpResponse = response as? HTTPURLResponse else {
+                print("Некорректный ответ от сервера.")
+                completion(.failure(NetworkErrors.invalidResponse))
+                return
+            }
+
+            guard (200...299).contains(httpResponse.statusCode) else {
+                print("Ошибка: неверный статус ответа \(httpResponse.statusCode)")
+                completion(.failure(NetworkErrors.invalidStatusCode(httpResponse.statusCode)))
+                return
+            }
+
+            guard let data = data else {
+                print("Нет данных в ответе.")
+                completion(.failure(NetworkErrors.noData))
+                return
+            }
+
+            do {
+                let responseBody = try self.decoder.decode(OAuthTokenResponseBody.self, from: data)
+                OAuth2TokenStorage.shared.token = responseBody.accessToken
+                print("Токен успешно получен: \(responseBody.accessToken)")
+                completion(.success(responseBody.accessToken))
+            } catch {
+                print("Ошибка декодирования: \(error)")
+                completion(.failure(NetworkErrors.decodingError(error)))
             }
         }
         task.resume()
@@ -38,7 +59,10 @@ final class OAuth2Service {
 
 extension OAuth2Service {
     func makeOAuthTokenRequest(code: String) -> URLRequest? {
-        guard let url = URL(string: "https://unsplash.com/oauth/token") else { return nil}
+        guard let url = URL(string: "https://unsplash.com/oauth/token") else {
+            print("Ошибка: некорректный URL.")
+            return nil
+        }
         
         var request = URLRequest(url: url)
         request.setMethod(.post)
@@ -53,18 +77,19 @@ extension OAuth2Service {
         ]
         
         let stringBody = params
-            .map {key, value in
+            .map { key, value in
                 let allowed = CharacterSet.alphanumerics.union(.init(charactersIn: "-._~"))
                 let k = key.addingPercentEncoding(withAllowedCharacters: allowed) ?? key
                 let v = value.addingPercentEncoding(withAllowedCharacters: allowed) ?? value
                 return "\(k)=\(v)"
             }
             .joined(separator: "&")
+
         request.httpBody = stringBody.data(using: .utf8)
+        print("🧾 Тело запроса: \(stringBody)")
         return request
     }
 }
-
 
 enum HTTPMethod: String {
     case get = "GET"
