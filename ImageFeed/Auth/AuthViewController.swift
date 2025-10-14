@@ -9,10 +9,18 @@ final class AuthViewController: UIViewController {
     
     weak var delegate: AuthViewControllerDelegate?
     
+    
+    @IBOutlet weak var loginButton: UIButton!
+    
     override func viewDidLoad() {
         super.viewDidLoad()
         
         configureBackButton()
+        configurateLoginButton()
+    }
+    
+    private func configurateLoginButton() {
+        loginButton.titleLabel?.font = UIFont.systemFont(ofSize: 17, weight: .bold)
     }
     
     override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
