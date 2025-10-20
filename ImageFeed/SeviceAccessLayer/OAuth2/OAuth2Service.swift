@@ -3,54 +3,58 @@ import Foundation
 final class OAuth2Service {
     static let shared = OAuth2Service()
     private init() {}
- 
-    private let decoder: JSONDecoder = {
-        let dec = JSONDecoder()
-        return dec
-    }()
+    
+    private var currentTask: URLSessionTask?
+    private var lastCode: String?
     
     func fetchOAuthToken(code: String, completion: @escaping (Result<String, Error>) -> Void) {
+        if let currentTask = currentTask, lastCode == code {
+            print("[fetchOAuthToken]: Ошибка - запрос уже выполняется с code: \(code)")
+            DispatchQueue.main.async {
+                completion(.failure(NetworkErrors.requestInProgress))
+            }
+            return
+        }
+        
+        currentTask?.cancel()
+        
         guard let request = makeOAuthTokenRequest(code: code) else {
-            print("Ошибка: не удалось создать URLRequest")
+            print("[fetchOAuthToken]: Ошибка - не удалось создать URLRequest для code: \(code)")
             DispatchQueue.main.async {
                 completion(.failure(NetworkErrors.invalidRequest))
             }
             return
         }
-
-        let task = URLSession.shared.dataTask(with: request) { [weak self] data, response, error in
+        
+        lastCode = code
+        
+        let task = URLSession.shared.objectTask(for: request) { [weak self] (result: Result<OAuthTokenResponseBody, Error>) in
+            guard let self = self else { return }
             
-            let result: Result<String, Error>
-            
-            if let error = error {
-                print("Ошибка сети: \(error.localizedDescription)")
-                result = .failure(error)
-            } else if let httpResponse = response as? HTTPURLResponse, !(200...299).contains(httpResponse.statusCode) {
-                print("Ошибка: неверный статус ответа \(httpResponse.statusCode)")
-                result = .failure(NetworkErrors.invalidStatusCode(httpResponse.statusCode))
-            } else if let data = data {
-                do {
-                    let responseBody = try self?.decoder.decode(OAuthTokenResponseBody.self, from: data)
-                    if let accessToken = responseBody?.accessToken {
-                        OAuth2TokenStorage.shared.token = accessToken
-                        print("Токен успешно получен: \(accessToken)")
-                        result = .success(accessToken)
-                    } else {
-                        result = .failure(NetworkErrors.noData)
-                    }
-                } catch {
-                    print("Ошибка декодирования: \(error)")
-                    result = .failure(NetworkErrors.decodingError(error))
+            defer {
+                DispatchQueue.main.async {
+                    self.currentTask = nil
+                    self.lastCode = nil
                 }
-            } else {
-                print("Нет данных в ответе.")
-                result = .failure(NetworkErrors.noData)
             }
             
-            DispatchQueue.main.async {
-                completion(result)
+            switch result {
+            case .success(let responseBody):
+                let accessToken = responseBody.accessToken
+                OAuth2TokenStorage.shared.token = accessToken
+                print("[fetchOAuthToken]: Успешно получен токен для code: \(code)")
+                DispatchQueue.main.async {
+                    completion(.success(accessToken))
+                }
+            case .failure(let error):
+                print("[fetchOAuthToken]: Ошибка получения токена для code: \(code) - \(error.localizedDescription)")
+                DispatchQueue.main.async {
+                    completion(.failure(error))
+                }
             }
         }
+        
+        currentTask = task
         task.resume()
     }
 }

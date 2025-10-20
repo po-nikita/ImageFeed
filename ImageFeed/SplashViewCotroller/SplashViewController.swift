@@ -11,7 +11,12 @@ final class SplashViewController: UIViewController {
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
         
-        checkAuthentication()
+        if let token = storage.token {
+            switchTabBarController()
+            fetchProfile(token: token)
+        } else {
+            performSegue(withIdentifier: showAuthenticationSegueIdentifier, sender: nil)
+        }
     }
     
     override func viewWillAppear(_ animated: Bool) {
@@ -25,12 +30,14 @@ final class SplashViewController: UIViewController {
     
     
     private func checkAuthentication() {
-        if storage.token != nil {
-            switchTabBarController()
-        } else {
-            performSegue(withIdentifier: showAuthenticationSegueIdentifier, sender: nil)
+            if OAuth2TokenStorage.shared.hasToken {
+                if let token = OAuth2TokenStorage.shared.token {
+                    fetchProfile(token: token)
+                }
+            } else {
+                performSegue(withIdentifier: showAuthenticationSegueIdentifier, sender: nil)
+            }
         }
-    }
     
     private func switchTabBarController() {
         guard let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
@@ -44,6 +51,44 @@ final class SplashViewController: UIViewController {
         
         window.rootViewController = tabBarController
         window.makeKeyAndVisible()
+    }
+    
+    private func fetchProfile(token: String) {
+        UIBlockingProgressHUD.show()
+        ProfileService.shared.fetchProfile(token) { [weak self] result in
+            UIBlockingProgressHUD.dismiss()
+            
+            switch result {
+            case .success:
+                if let username = ProfileService.shared.profile?.username {
+                    ProfileImageService.shared.fetchProfileImageURL(username: username) { result in
+                        switch result {
+                        case .success(let avatarURL):
+                            print("Аватарка успешно загружена: \(avatarURL)")
+                        case .failure(let error):
+                            print("Ошибка загрузки аватарки: \(error)")
+                        }
+                    }
+                }
+                DispatchQueue.main.async {
+                    self?.switchTabBarController()
+                }
+                
+            case .failure(let error):
+                print("Ошибка загрузки профиля: \(error)")
+                DispatchQueue.main.async {
+                    self?.showErrorAlert(message: "Не удалось загрузить профиль")
+                }
+            }
+        }
+    }
+    
+    private func showErrorAlert(message: String) {
+        let alert = UIAlertController(title: "Ошибка",
+                                      message: message,
+                                      preferredStyle: .alert)
+        alert.addAction(UIAlertAction(title: "ОК", style: .default))
+        present(alert, animated: true)
     }
 }
 

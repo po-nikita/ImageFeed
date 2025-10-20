@@ -18,32 +18,28 @@ final class WebViewViewController: UIViewController {
     @IBOutlet private var progressView: UIProgressView!
 
     weak var delegate: WebViewViewControllerDelegate?
+    
+    private var estimatedProgressObservation: NSKeyValueObservation?
 
     // MARK: - Жизненный цикл
     override func viewDidLoad() {
         super.viewDidLoad()
         
         webView.navigationDelegate = self
-        webView.addObserver(self, forKeyPath: #keyPath(WKWebView.estimatedProgress), options: .new, context: nil)
+        // ЗАМЕНЕНО: старое KVO на новое
+        setupProgressObservation()
         loadAuthView()
     }
 
     deinit {
-        webView.removeObserver(self, forKeyPath: #keyPath(WKWebView.estimatedProgress))
+        estimatedProgressObservation?.invalidate()
     }
 
-    // MARK: - KVO
-    override func observeValue(forKeyPath keyPath: String?,
-                               of object: Any?,
-                               change: [NSKeyValueChangeKey : Any]?,
-                               context: UnsafeMutableRawPointer?) {
-        if keyPath == #keyPath(WKWebView.estimatedProgress) {
-            updateProgress()
-        } else {
-            super.observeValue(forKeyPath: keyPath,
-                               of: object,
-                               change: change,
-                               context: context)
+    // MARK: - Настройка наблюдения за прогрессом (НОВЫЙ МЕТОД)
+    private func setupProgressObservation() {
+        estimatedProgressObservation = webView.observe(\.estimatedProgress, options: [.new]) { [weak self] _, change in
+            guard let self = self else { return }
+            self.updateProgress()
         }
     }
 
@@ -68,7 +64,7 @@ final class WebViewViewController: UIViewController {
         ]
 
         guard let url = urlComponents.url else {
-            print(" Ошибка: невозможно создать URL из компонентов")
+            print("Ошибка: невозможно создать URL из компонентов")
             return
         }
 
