@@ -1,22 +1,24 @@
 import UIKit
 
 final class SplashViewController: UIViewController {
-    private let showAuthenticationSegueIdentifier = "ShowAuthenticationScreen"
     private let storage = OAuth2TokenStorage.shared
+    
+    private let logoImageView: UIImageView = {
+        let imageView = UIImageView()
+        imageView.image = UIImage(named: "splash_screen_logo")
+        imageView.contentMode = .scaleAspectFit
+        imageView.translatesAutoresizingMaskIntoConstraints = false
+        return imageView
+    }()
     
     override func viewDidLoad() {
         super.viewDidLoad()
+        setupUI()
     }
     
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
-        
-        if let token = storage.token {
-            switchTabBarController()
-            fetchProfile(token: token)
-        } else {
-            performSegue(withIdentifier: showAuthenticationSegueIdentifier, sender: nil)
-        }
+        checkAuthentication()
     }
     
     override func viewWillAppear(_ animated: Bool) {
@@ -28,27 +30,47 @@ final class SplashViewController: UIViewController {
         .lightContent
     }
     
+    private func setupUI() {
+        view.backgroundColor = .ypBlack
+        
+        view.addSubview(logoImageView)
+        
+        NSLayoutConstraint.activate([
+            logoImageView.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            logoImageView.centerYAnchor.constraint(equalTo: view.centerYAnchor)
+        ])
+    }
     
     private func checkAuthentication() {
-            if OAuth2TokenStorage.shared.hasToken {
-                if let token = OAuth2TokenStorage.shared.token {
-                    fetchProfile(token: token)
-                }
-            } else {
-                performSegue(withIdentifier: showAuthenticationSegueIdentifier, sender: nil)
-            }
+        if let token = storage.token {
+            fetchProfile(token: token)
+        } else {
+            showAuthViewController()
         }
+    }
     
-    private func switchTabBarController() {
+    private func showAuthViewController() {
+        let storyboard = UIStoryboard(name: "Main", bundle: .main)
+        guard let authViewController = storyboard.instantiateViewController(
+            withIdentifier: "AuthViewController"
+        ) as? AuthViewController else {
+            assertionFailure("Failed to instantiate AuthViewController")
+            return
+        }
+        
+        authViewController.delegate = self
+        authViewController.modalPresentationStyle = .fullScreen
+        present(authViewController, animated: true)
+    }
+    
+    private func switchToTabBarController() {
         guard let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
               let window = windowScene.windows.first else {
             assertionFailure("Invalid window configuration")
             return
         }
         
-        let tabBarController = UIStoryboard(name: "Main", bundle: .main)
-            .instantiateViewController(withIdentifier: "TabBarViewController")
-        
+        let tabBarController = TabBarController()
         window.rootViewController = tabBarController
         window.makeKeyAndVisible()
     }
@@ -71,7 +93,7 @@ final class SplashViewController: UIViewController {
                     }
                 }
                 DispatchQueue.main.async {
-                    self?.switchTabBarController()
+                    self?.switchToTabBarController()
                 }
                 
             case .failure(let error):
@@ -84,28 +106,13 @@ final class SplashViewController: UIViewController {
     }
     
     private func showErrorAlert(message: String) {
-        let alert = UIAlertController(title: "Ошибка",
-                                      message: message,
-                                      preferredStyle: .alert)
-        alert.addAction(UIAlertAction(title: "ОК", style: .default))
+        let alert = UIAlertController(
+            title: "Ошибка",
+            message: message,
+            preferredStyle: .alert
+        )
+        alert.addAction(UIAlertAction(title: "OK", style: .default))
         present(alert, animated: true)
-    }
-}
-
-extension SplashViewController {
-    override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
-        if segue.identifier == showAuthenticationSegueIdentifier {
-            guard
-                let navigationController = segue.destination as? UINavigationController,
-                let viewController = navigationController.viewControllers.first as? AuthViewController
-            else {
-                assertionFailure("Failed to prapare for \(showAuthenticationSegueIdentifier)")
-                return
-            }
-            viewController.delegate = self
-        } else {
-            super.prepare(for: segue, sender: sender)
-        }
     }
 }
 
@@ -116,4 +123,3 @@ extension SplashViewController: AuthViewControllerDelegate {
         }
     }
 }
-

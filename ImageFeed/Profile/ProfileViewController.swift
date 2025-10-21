@@ -13,6 +13,7 @@ final class ProfileViewController: UIViewController {
     
     override func viewDidLoad() {
         super.viewDidLoad()
+        view.backgroundColor = .ypBlack
         
         setupProfileImage()
         setupNameLabel()
@@ -69,7 +70,6 @@ final class ProfileViewController: UIViewController {
         
         print("Загружаем аватарку по URL: \(url)")
         
-        // Создаем placeholder изображение
         let placeholderImage = UIImage(named: "avatar") ?? UIImage(systemName: "person.circle.fill")?
             .withTintColor(.lightGray, renderingMode: .alwaysOriginal)
         
