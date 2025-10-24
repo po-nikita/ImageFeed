@@ -48,7 +48,7 @@ final class AuthViewController: UIViewController {
     
     private func showErrorAlert() {
         let alert = UIAlertController(
-            title: "Что-то пошло не так",
+            title: "Что-то пошло не так :(",
             message: "Не удалось войти в систему",
             preferredStyle: .alert
         )

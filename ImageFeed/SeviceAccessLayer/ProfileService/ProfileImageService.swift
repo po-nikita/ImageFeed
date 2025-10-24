@@ -31,20 +31,20 @@ final class ProfileImageService {
     private var lastUsername: String?
     
     func fetchProfileImageURL(username: String, _ completion: @escaping (Result<String, Error>) -> Void) {
-            if task != nil, lastUsername == username {
-                print("[fetchProfileImageURL]: Ошибка - запрос уже выполняется для username: \(username)")
-                completion(.failure(NSError(domain: "ProfileImageService", code: -1, userInfo: [NSLocalizedDescriptionKey: "Request for this username is already in progress"])))
-                return
-            }
-            
-            task?.cancel()
-            
-            guard let token = OAuth2TokenStorage.shared.token else {
-                print("[fetchProfileImageURL]: Ошибка - отсутствует токен авторизации для username: \(username)")
-                completion(.failure(NSError(domain: "ProfileImageService", code: 401, userInfo: [NSLocalizedDescriptionKey: "Authorization token missing"])))
-                return
-            }
-            
+        if task != nil, lastUsername == username {
+            print("[fetchProfileImageURL]: Ошибка - запрос уже выполняется для username: \(username)")
+            completion(.failure(NSError(domain: "ProfileImageService", code: -1, userInfo: [NSLocalizedDescriptionKey: "Request for this username is already in progress"])))
+            return
+        }
+        
+        task?.cancel()
+        
+        guard let token = OAuth2TokenStorage.shared.token else {
+            print("[fetchProfileImageURL]: Ошибка - отсутствует токен авторизации для username: \(username)")
+            completion(.failure(NSError(domain: "ProfileImageService", code: 401, userInfo: [NSLocalizedDescriptionKey: "Authorization token missing"])))
+            return
+        }
+        
         
         guard let request = makeProfileImageRequest(username: username, token: token) else {
             print("[fetchProfileImageURL]: Ошибка - не удалось создать URLRequest для username: \(username)")
@@ -90,7 +90,7 @@ final class ProfileImageService {
     }
     
     private func makeProfileImageRequest(username: String, token: String) -> URLRequest? {
-        guard let url = URL(string: "https://api.unsplash.com/users/\(username)") else {
+        guard let url = URL(string: Constants.userURL + username) else {
             return nil
         }
         var request = URLRequest(url: url)

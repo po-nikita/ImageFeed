@@ -49,14 +49,14 @@ final class ProfileViewController: UIViewController {
     
     private func updateProfileDetails(profile: Profile) {
         nameLabel.text = profile.name.isEmpty
-            ? "Имя не указано"
-            : profile.name
+        ? "Имя не указано"
+        : profile.name
         loginLabel.text = profile.loginName.isEmpty
-            ? "@неизвестный_пользователь"
-            : profile.loginName
+        ? "@неизвестный_пользователь"
+        : profile.loginName
         descriptionLabel.text = (profile.bio?.isEmpty ?? true)
-            ? "Профиль не заполнен"
-            : profile.bio
+        ? "Профиль не заполнен"
+        : profile.bio
     }
     
     private func updateAvatar() {
@@ -70,7 +70,7 @@ final class ProfileViewController: UIViewController {
         
         print("Загружаем аватарку по URL: \(url)")
         
-        let placeholderImage = UIImage(named: "avatar") ?? UIImage(systemName: "person.circle.fill")?
+        let placeholderImage = UIImage(resource: .avatar)
             .withTintColor(.lightGray, renderingMode: .alwaysOriginal)
         
         let processor = RoundCornerImageProcessor(cornerRadius: 35)
@@ -114,7 +114,7 @@ final class ProfileViewController: UIViewController {
         nameLabel.textColor = .white
         nameLabel.font = UIFont.systemFont(ofSize: 23, weight: .bold)
     }
-
+    
     private func setupProfileLogin() {
         loginLabel.text = "@загрузка"
         loginLabel.translatesAutoresizingMaskIntoConstraints = false
@@ -129,7 +129,7 @@ final class ProfileViewController: UIViewController {
         view.addSubview(descriptionLabel)
         descriptionLabel.textColor = .white
         descriptionLabel.font = UIFont.systemFont(ofSize: 13, weight: .regular)
-        descriptionLabel.numberOfLines = 0 
+        descriptionLabel.numberOfLines = 0
     }
     
     private func setupLogoutButton() {
