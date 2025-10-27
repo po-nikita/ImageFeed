@@ -10,15 +10,20 @@ final class ImagesListService {
     private var currentTask: URLSessionTask?
     private var lastLoadedPage: Int?
     
+    private let iso8601DateFormatter: ISO8601DateFormatter = {
+        let formatter = ISO8601DateFormatter()
+        return formatter
+    }()
+    
     func fetchPhotosNextPage() {
-        if currentTask != nil { return }
-        
+        guard currentTask == nil else { return }
+
         let nextPage = (lastLoadedPage ?? 0) + 1
         guard let request = makePhotosRequest(page: nextPage) else { return }
         
         let task = URLSession.shared.objectTask(for: request) { [weak self] (result: Result<[PhotoResult], Error>) in
-            guard let self = self else { return }
-            
+            guard let self else { return }
+
             defer {
                 DispatchQueue.main.async {
                     self.currentTask = nil
@@ -75,8 +80,7 @@ final class ImagesListService {
     private func parseDate(from string: String?) -> Date? {
         guard let string = string else { return nil }
         
-        let formatter = ISO8601DateFormatter()
-        return formatter.date(from: string)
+        return iso8601DateFormatter.date(from: string)
     }
     
     func changeLike(photoId: String, isLike: Bool, _ completion: @escaping (Result<Void, Error>) -> Void) {
@@ -133,6 +137,7 @@ final class ImagesListService {
             }
         }
     }
+    
     func resetData() {
         photos = []
         currentTask?.cancel()
@@ -140,6 +145,7 @@ final class ImagesListService {
         lastLoadedPage = nil
     }
 }
+
 extension Array {
     func withReplaced(itemAt index: Int, newValue: Element) -> Array {
         var array = self
@@ -147,5 +153,3 @@ extension Array {
         return array
     }
 }
-
-

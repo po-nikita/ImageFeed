@@ -10,7 +10,7 @@ struct Profile {
 struct ProfileResult: Codable {
     let username: String
     let firstName: String
-    let lastName: String
+    let lastName: String?
     let bio: String?
     
     private enum CodingKeys: String, CodingKey {
@@ -18,6 +18,19 @@ struct ProfileResult: Codable {
         case firstName = "first_name"
         case lastName = "last_name"
         case bio
+    }
+    
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        guard let username = try? container.decode(String.self, forKey: .username),
+              let firstName = try? container.decode(String.self, forKey: .firstName) else {
+            throw DecodingError.dataCorrupted(.init(codingPath: decoder.codingPath, debugDescription: "Missing required fields"))
+        }
+        
+        self.username = username
+        self.firstName = firstName
+        self.lastName = try? container.decode(String.self, forKey: .lastName)
+        self.bio = try? container.decode(String.self, forKey: .bio)
     }
 }
 
@@ -37,20 +50,37 @@ final class ProfileService {
             return
         }
         
-        let task = URLSession.shared.objectTask(for: request) { [weak self] (result: Result<ProfileResult, Error>) in
-            switch result {
-            case .success(let profileResult):
+        let task = URLSession.shared.dataTask(with: request) { [weak self] data, response, error in
+            if let error = error {
+                print("[fetchProfile]: Сетевая ошибка - \(error.localizedDescription)")
+                completion(.failure(error))
+                return
+            }
+            
+            guard let data = data else {
+                print("[fetchProfile]: Нет данных в ответе")
+                completion(.failure(URLError(.badServerResponse)))
+                return
+            }
+            
+            if let jsonString = String(data: data, encoding: .utf8) {
+                print("[fetchProfile]: Получены данные: \(jsonString.prefix(500))...")
+            }
+            
+            do {
+                let profileResult = try JSONDecoder().decode(ProfileResult.self, from: data)
                 let profile = Profile(
                     username: profileResult.username,
-                    name: "\(profileResult.firstName) \(profileResult.lastName)",
+                    name: "\(profileResult.firstName) \(profileResult.lastName ?? "")".trimmingCharacters(in: .whitespaces),
                     loginName: "@\(profileResult.username)",
                     bio: profileResult.bio
                 )
                 self?.profile = profile
                 print("[fetchProfile]: Успешно получен профиль для пользователя: \(profileResult.username)")
                 completion(.success(profile))
-            case .failure(let error):
-                print("[fetchProfile]: Ошибка получения профиля - \(error.localizedDescription)")
+            } catch {
+                print("[fetchProfile]: Ошибка декодирования - \(error)")
+                print("[fetchProfile]: Данные: \(String(data: data, encoding: .utf8) ?? "неизвестно")")
                 completion(.failure(error))
             }
             self?.task = nil
