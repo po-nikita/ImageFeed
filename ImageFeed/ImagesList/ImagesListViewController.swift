@@ -3,7 +3,7 @@ import Kingfisher
 
 final class ImagesListViewController: UIViewController {
     private let showSingleImageSegueIdentifier = "ShowSingleImage"
-
+    
     @IBOutlet private weak var tableView: UITableView!
     
     private var photos: [Photo] = []
@@ -65,12 +65,8 @@ final class ImagesListViewController: UIViewController {
             }
             
             let photo = photos[indexPath.row]
-            print("Передаем URL: \(photo.largeImageURL)")
-            
             if let url = URL(string: photo.largeImageURL) {
                 viewController.imageURL = url
-            } else {
-                print("Ошибка: не удалось создать URL из строки: \(photo.largeImageURL)")
             }
         } else {
             super.prepare(for: segue, sender: sender)
@@ -89,14 +85,19 @@ extension ImagesListViewController: UITableViewDataSource {
         guard let imageListCell = cell as? ImagesListCell else {
             return UITableViewCell()
         }
+        
+        imageListCell.showGradientAnimation()
+        
         configCell(for: imageListCell, with: indexPath)
         return imageListCell
     }
 }
 
 extension ImagesListViewController {
-    func configCell(for cell: ImagesListCell, with indexPath: IndexPath){
+    func configCell(for cell: ImagesListCell, with indexPath: IndexPath) {
         let photo = photos[indexPath.row]
+        
+        cell.showGradientAnimation()
         
         cell.delegate = self
         
@@ -109,15 +110,16 @@ extension ImagesListViewController {
         }
         
         if let url = URL(string: photo.thumbImageURL) {
-            let placeholder = UIImage(named: "stub_photo")
             cell.cellImage.kf.indicatorType = .activity
+            
             cell.cellImage.kf.setImage(
                 with: url,
-                placeholder: placeholder,
                 options: [.transition(.fade(0.2))]
             ) { [weak self] result in
                 switch result {
                 case .success:
+                    cell.removeGradientAnimation()
+                    
                     UIView.performWithoutAnimation {
                         self?.tableView.reloadRows(at: [indexPath], with: .none)
                     }
@@ -125,6 +127,8 @@ extension ImagesListViewController {
                     print("Ошибка загрузки изображения: \(error)")
                 }
             }
+        } else {
+            cell.removeGradientAnimation()
         }
     }
 }
@@ -152,7 +156,6 @@ extension ImagesListViewController: UITableViewDelegate {
             imagesListService.fetchPhotosNextPage()
         }
     }
-    
 }
 
 extension ImagesListViewController: ImagesListCellDelegate {
@@ -173,12 +176,22 @@ extension ImagesListViewController: ImagesListCellDelegate {
                         cell.setIsLiked(newPhoto.isLiked)
                     }
                 case .failure:
-                    // TODO: Показать ошибку с использованием UIAlertController
-                    break
+                    self?.showLikeErrorAlert()
                 }
             }
         }
     }
     
+    private func showLikeErrorAlert() {
+        let alert = UIAlertController(
+            title: "Что-то пошло не так",
+            message: "Не удалось изменить статус лайка",
+            preferredStyle: .alert
+        )
+        
+        let action = UIAlertAction(title: "OK", style: .default)
+        alert.addAction(action)
+        
+        present(alert, animated: true)
+    }
 }
-

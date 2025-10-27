@@ -10,6 +10,7 @@ final class ProfileViewController: UIViewController {
     private let logoutButton = UIButton(type: .custom)
     
     private var profileImageServiceObserver: NSObjectProtocol?
+    private var animationLayers: [CALayer] = []
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -22,6 +23,8 @@ final class ProfileViewController: UIViewController {
         setupLogoutButton()
         setupConstraints()
         
+        addGradientAnimation()
+        
         updateProfileDetails()
         
         profileImageServiceObserver = NotificationCenter.default
@@ -31,19 +34,101 @@ final class ProfileViewController: UIViewController {
                 queue: .main
             ) { [weak self] _ in
                 guard let self = self else { return }
+                self.removeGradientAnimation()
                 self.updateAvatar()
             }
         updateAvatar()
     }
     
+    @objc private func didTapLogoutButton() {
+        showLogoutAlert()
+    }
+    
+    private func showLogoutAlert() {
+        let alert = UIAlertController(
+            title: "Пока, пока!",
+            message: "Уверены, что хотите выйти?",
+            preferredStyle: .alert
+        )
+        
+        let logoutAction = UIAlertAction(title: "Да", style: .default) { [weak self] _ in
+            self?.performLogout()
+        }
+        
+        let cancelAction = UIAlertAction(title: "Нет", style: .cancel)
+        
+        alert.addAction(logoutAction)
+        alert.addAction(cancelAction)
+        
+        present(alert, animated: true)
+    }
+    
+    private func performLogout() {
+        ProfileLogoutService.shared.logout()
+    }
+    
+    private func addGradientAnimation() {
+        let avatarGradient = createGradientLayer()
+        avatarGradient.frame = CGRect(origin: .zero, size: CGSize(width: 70, height: 70))
+        avatarGradient.cornerRadius = 35
+        imageView.layer.addSublayer(avatarGradient)
+        animationLayers.append(avatarGradient)
+        
+        let nameGradient = createGradientLayer()
+        nameGradient.frame = CGRect(x: 0, y: 0, width: 200, height: 24)
+        nameLabel.layer.addSublayer(nameGradient)
+        animationLayers.append(nameGradient)
+        
+        let loginGradient = createGradientLayer()
+        loginGradient.frame = CGRect(x: 0, y: 0, width: 150, height: 18)
+        loginLabel.layer.addSublayer(loginGradient)
+        animationLayers.append(loginGradient)
+        
+        let descriptionGradient = createGradientLayer()
+        descriptionGradient.frame = CGRect(x: 0, y: 0, width: 250, height: 36)
+        descriptionLabel.layer.addSublayer(descriptionGradient)
+        animationLayers.append(descriptionGradient)
+        
+        nameLabel.text = ""
+        loginLabel.text = ""
+        descriptionLabel.text = ""
+    }
+    
+    private func createGradientLayer() -> CAGradientLayer {
+        let gradient = CAGradientLayer()
+        gradient.locations = [0, 0.1, 0.3]
+        gradient.colors = [
+            UIColor(red: 0.682, green: 0.686, blue: 0.706, alpha: 1).cgColor,
+            UIColor(red: 0.531, green: 0.533, blue: 0.553, alpha: 1).cgColor,
+            UIColor(red: 0.431, green: 0.433, blue: 0.453, alpha: 1).cgColor
+        ]
+        gradient.startPoint = CGPoint(x: 0, y: 0.5)
+        gradient.endPoint = CGPoint(x: 1, y: 0.5)
+        gradient.masksToBounds = true
+        
+        let gradientChangeAnimation = CABasicAnimation(keyPath: "locations")
+        gradientChangeAnimation.duration = 1.0
+        gradientChangeAnimation.repeatCount = .infinity
+        gradientChangeAnimation.fromValue = [0, 0.1, 0.3]
+        gradientChangeAnimation.toValue = [0, 0.8, 1]
+        gradient.add(gradientChangeAnimation, forKey: "locationsChange")
+        
+        return gradient
+    }
+    
+    private func removeGradientAnimation() {
+        animationLayers.forEach { layer in
+            layer.removeFromSuperlayer()
+        }
+        animationLayers.removeAll()
+    }
+        
     private func updateProfileDetails() {
         guard let profile = ProfileService.shared.profile else {
-            nameLabel.text = "Загрузка..."
-            loginLabel.text = "@загрузка"
-            descriptionLabel.text = "Профиль загружается"
             return
         }
         
+        removeGradientAnimation()
         updateProfileDetails(profile: profile)
     }
     
@@ -96,8 +181,7 @@ final class ProfileViewController: UIViewController {
             }
         }
     }
-    
-    
+        
     private func setupProfileImage() {
         let profileImage = UIImage(named: "avatar")
         imageView.image = profileImage
@@ -108,9 +192,7 @@ final class ProfileViewController: UIViewController {
         view.addSubview(imageView)
     }
     
-    
     private func setupNameLabel() {
-        nameLabel.text = "Загрузка..."
         nameLabel.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(nameLabel)
         nameLabel.textColor = .white
@@ -118,7 +200,6 @@ final class ProfileViewController: UIViewController {
     }
     
     private func setupProfileLogin() {
-        loginLabel.text = "@загрузка"
         loginLabel.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(loginLabel)
         loginLabel.textColor = .ypGray
@@ -126,7 +207,6 @@ final class ProfileViewController: UIViewController {
     }
     
     private func setupDescription() {
-        descriptionLabel.text = "Профиль загружается"
         descriptionLabel.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(descriptionLabel)
         descriptionLabel.textColor = .white
@@ -139,12 +219,7 @@ final class ProfileViewController: UIViewController {
         logoutButton.setImage(image, for: .normal)
         logoutButton.translatesAutoresizingMaskIntoConstraints = false
         logoutButton.addTarget(self, action: #selector(didTapLogoutButton), for: .touchUpInside)
-        
         view.addSubview(logoutButton)
-    }
-    
-    @objc private func didTapLogoutButton() {
-        ProfileLogoutService.shared.logout()
     }
     
     private func setupConstraints() {
