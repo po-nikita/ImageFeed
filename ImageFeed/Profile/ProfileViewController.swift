@@ -97,6 +97,7 @@ final class ProfileViewController: UIViewController {
         }
     }
     
+    
     private func setupProfileImage() {
         let profileImage = UIImage(named: "avatar")
         imageView.image = profileImage
@@ -106,6 +107,7 @@ final class ProfileViewController: UIViewController {
         imageView.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(imageView)
     }
+    
     
     private func setupNameLabel() {
         nameLabel.text = "Загрузка..."
@@ -136,7 +138,13 @@ final class ProfileViewController: UIViewController {
         let image = UIImage(named: "Exit")
         logoutButton.setImage(image, for: .normal)
         logoutButton.translatesAutoresizingMaskIntoConstraints = false
+        logoutButton.addTarget(self, action: #selector(didTapLogoutButton), for: .touchUpInside)
+        
         view.addSubview(logoutButton)
+    }
+    
+    @objc private func didTapLogoutButton() {
+        ProfileLogoutService.shared.logout()
     }
     
     private func setupConstraints() {
