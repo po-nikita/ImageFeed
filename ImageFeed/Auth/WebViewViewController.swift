@@ -1,9 +1,11 @@
 import UIKit
 import WebKit
 
-// MARK: - Константы
-enum WebViewConstants {
-    static let unsplashAuthorizeURLString = "https://unsplash.com/oauth/authorize"
+public protocol WebViewViewControllerProtocol: AnyObject {
+    var presenter: WebViewPresenterProtocol? { get set }
+    func load(request: URLRequest)
+    func setProgressValue(_ newValue: Float)
+    func setProgressHidden(_ isHidden: Bool)
 }
 
 // MARK: - Протокол делегата
@@ -13,65 +15,49 @@ protocol WebViewViewControllerDelegate: AnyObject {
 }
 
 // MARK: - Основной контроллер
-final class WebViewViewController: UIViewController {
+final class WebViewViewController: UIViewController, WebViewViewControllerProtocol {
     @IBOutlet private var webView: WKWebView!
     @IBOutlet private var progressView: UIProgressView!
-
-    weak var delegate: WebViewViewControllerDelegate?
     
+    weak var delegate: WebViewViewControllerDelegate?
+    var presenter: WebViewPresenterProtocol?
     private var estimatedProgressObservation: NSKeyValueObservation?
-
+    
     // MARK: - Жизненный цикл
     override func viewDidLoad() {
         super.viewDidLoad()
         
         webView.navigationDelegate = self
-        // ЗАМЕНЕНО: старое KVO на новое
         setupProgressObservation()
-        loadAuthView()
+        presenter?.viewDidLoad()
     }
-
+    
     deinit {
         estimatedProgressObservation?.invalidate()
     }
-
-    // MARK: - Настройка наблюдения за прогрессом (НОВЫЙ МЕТОД)
+    
+    func load(request: URLRequest) {
+        webView.load(request)
+    }
+    
+    // MARK: - Настройка наблюдения за прогрессом
     private func setupProgressObservation() {
         estimatedProgressObservation = webView.observe(\.estimatedProgress, options: [.new]) { [weak self] _, change in
             guard let self = self else { return }
-            self.updateProgress()
+            self.presenter?.didUpdateProgressValue(self.webView.estimatedProgress)
         }
     }
-
+    
     // MARK: - Обновление прогресса
-    private func updateProgress() {
-        progressView.progress = Float(webView.estimatedProgress)
-        progressView.isHidden = abs(webView.estimatedProgress - 1.0) <= 0.0001
+    func setProgressValue(_ newValue: Float) {
+        progressView.progress = newValue
     }
-
-    // MARK: - Загрузка страницы авторизации
-    private func loadAuthView() {
-        guard var urlComponents = URLComponents(string: WebViewConstants.unsplashAuthorizeURLString) else {
-            print("Ошибка: невозможно создать URLComponents")
-            return
-        }
-
-        urlComponents.queryItems = [
-            URLQueryItem(name: "client_id", value: Constants.accessKey),
-            URLQueryItem(name: "redirect_uri", value: Constants.redirectURI),
-            URLQueryItem(name: "response_type", value: "code"),
-            URLQueryItem(name: "scope", value: Constants.accessScope)
-        ]
-
-        guard let url = urlComponents.url else {
-            print("Ошибка: невозможно создать URL из компонентов")
-            return
-        }
-
-        let request = URLRequest(url: url)
-        webView.load(request)
+    
+    func setProgressHidden(_ isHidden: Bool) {
+        progressView.isHidden = isHidden
     }
-
+    
+    
     // MARK: - Действие кнопки «Назад»
     @IBAction private func didTapBackButton(_ sender: Any) {
         delegate?.webViewViewControllerDidCancel(self)
@@ -93,17 +79,11 @@ extension WebViewViewController: WKNavigationDelegate {
             decisionHandler(.allow)
         }
     }
-
+    
     // MARK: - Извлечение кода авторизации
     private func code(from navigationAction: WKNavigationAction) -> String? {
-        if
-            let url = navigationAction.request.url,
-            let urlComponents = URLComponents(string: url.absoluteString),
-            urlComponents.path == "/oauth/authorize/native",
-            let item = urlComponents.queryItems,
-            let codeItem = item.first(where: { $0.name == "code"})
-        {
-            return codeItem.value
+        if let url = navigationAction.request.url {
+            return presenter?.code(from: url)  
         } else {
             return nil
         }
