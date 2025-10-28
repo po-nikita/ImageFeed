@@ -1,14 +1,9 @@
 import UIKit
+import Kingfisher
 
 final class SingleImageViewController: UIViewController {
 
-    var image: UIImage? {
-        didSet {
-            guard isViewLoaded, let image else { return }
-            imageView.image = image
-            layoutImage()
-        }
-    }
+    var imageURL: URL?  
 
     @IBOutlet weak var scrollView: UIScrollView!
     @IBOutlet private var imageView: UIImageView!
@@ -30,36 +25,72 @@ final class SingleImageViewController: UIViewController {
                 imageView.heightAnchor.constraint(equalTo: scrollView.heightAnchor)
             ])
         
-        guard let image else { return }
+        guard let imageURL = imageURL else {
+            print("Ошибка: imageURL не установлен")
+            showError()
+            return
+        }
+        
+        loadImage(from: imageURL)
+    }
+
+    private func loadImage(from url: URL) {
+        UIBlockingProgressHUD.show()
+        
+        imageView.kf.setImage(with: url) { [weak self] result in
+            UIBlockingProgressHUD.dismiss()
+            
+            guard let self = self else { return }
+            switch result {
+            case .success(let imageResult):
+                self.rescaleAndCenterImageInScrollView(image: imageResult.image)
+            case .failure:
+                self.showError()
+            }
+        }
+    }
+
+    private func rescaleAndCenterImageInScrollView(image: UIImage) {
         imageView.image = image
-        layoutImage()
+        
+        let minZoomScale = scrollView.minimumZoomScale
+        let maxZoomScale = scrollView.maximumZoomScale
+        
+        scrollView.layoutIfNeeded()
+        let visibleRectSize = scrollView.bounds.size
+        let imageSize = image.size
+        
+        let hScale = visibleRectSize.width / imageSize.width
+        let vScale = visibleRectSize.height / imageSize.height
+        let scale = min(maxZoomScale, max(minZoomScale, max(hScale, vScale)))
+        
+        scrollView.setZoomScale(scale, animated: false)
+        scrollView.layoutIfNeeded()
+        
+        let newContentSize = scrollView.contentSize
+        let x = (newContentSize.width - visibleRectSize.width) / 2
+        let y = (newContentSize.height - visibleRectSize.height) / 2
+        scrollView.setContentOffset(CGPoint(x: x, y: y), animated: false)
     }
 
-    private func layoutImage() {
-        imageView.frame = scrollView.bounds
-        imageView.contentMode = .scaleAspectFit
-        scrollView.contentSize = imageView.frame.size
-        updateContentInset()
-    }
-
-    private func updateContentInset() {
-        let imageViewSize = imageView.frame.size
-        let scrollViewSize = scrollView.bounds.size
-
-        let verticalInset = imageViewSize.height < scrollViewSize.height
-            ? (scrollViewSize.height - imageViewSize.height) / 2
-            : 0
-
-        let horizontalInset = imageViewSize.width < scrollViewSize.width
-            ? (scrollViewSize.width - imageViewSize.width) / 2
-            : 0
-
-        scrollView.contentInset = UIEdgeInsets(
-            top: verticalInset,
-            left: horizontalInset,
-            bottom: verticalInset,
-            right: horizontalInset
+    private func showError() {
+        let alert = UIAlertController(
+            title: "Что-то пошло не так",
+            message: "Попробовать ещё раз?",
+            preferredStyle: .alert
         )
+        
+        let retryAction = UIAlertAction(title: "Повторить", style: .default) { [weak self] _ in
+            guard let url = self?.imageURL else { return }
+            self?.loadImage(from: url)
+        }
+        
+        let cancelAction = UIAlertAction(title: "Не надо", style: .cancel)
+        
+        alert.addAction(retryAction)
+        alert.addAction(cancelAction)
+        
+        present(alert, animated: true)
     }
 
     @IBAction private func didTapBackButton(_ sender: UIButton) {
@@ -67,7 +98,7 @@ final class SingleImageViewController: UIViewController {
     }
 
     @IBAction private func didTapShareButton(_ sender: UIButton) {
-        guard let image else { return }
+        guard let image = imageView.image else { return }
         let share = UIActivityViewController(activityItems: [image], applicationActivities: nil)
         present(share, animated: true)
     }
@@ -79,6 +110,8 @@ extension SingleImageViewController: UIScrollViewDelegate {
     }
 
     func scrollViewDidZoom(_ scrollView: UIScrollView) {
-        updateContentInset()
+        let offsetX = max((scrollView.bounds.width - scrollView.contentSize.width) * 0.5, 0)
+        let offsetY = max((scrollView.bounds.height - scrollView.contentSize.height) * 0.5, 0)
+        scrollView.contentInset = UIEdgeInsets(top: offsetY, left: offsetX, bottom: 0, right: 0)
     }
 }
