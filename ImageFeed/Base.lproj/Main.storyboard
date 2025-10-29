@@ -176,6 +176,7 @@
                     <navigationItem key="navigationItem" id="2il-38-CEw"/>
                     <connections>
                         <outlet property="imageView" destination="tf6-YE-e9B" id="f4w-hn-RGg"/>
+                        <outlet property="navBackButton" destination="Woq-vV-tNT" id="Drx-p6-AwD"/>
                         <outlet property="scrollView" destination="8Ik-Cc-Exr" id="5pI-6G-Dn9"/>
                     </connections>
                 </viewController>

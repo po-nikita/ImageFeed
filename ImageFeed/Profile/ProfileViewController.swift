@@ -16,6 +16,7 @@ final class ProfileViewController: UIViewController, ProfileViewControllerProtoc
         super.viewDidLoad()
         view.backgroundColor = .ypBlack
         
+        logoutButton.accessibilityIdentifier = "logout button"
         setupProfileImage()
         setupNameLabel()
         setupProfileLogin()
