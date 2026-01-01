@@ -1,7 +1,7 @@
 import UIKit
 import Kingfisher
 
-final class ProfileViewController: UIViewController {
+final class ProfileViewController: UIViewController, ProfileViewControllerProtocol {
     
     private var nameLabel = UILabel()
     private var imageView = UIImageView()
@@ -9,13 +9,14 @@ final class ProfileViewController: UIViewController {
     private var descriptionLabel = UILabel()
     private let logoutButton = UIButton(type: .custom)
     
-    private var profileImageServiceObserver: NSObjectProtocol?
+    var presenter: ProfilePresenterProtocol?
     private var animationLayers: [CALayer] = []
     
     override func viewDidLoad() {
         super.viewDidLoad()
         view.backgroundColor = .ypBlack
         
+        logoutButton.accessibilityIdentifier = "logout button"
         setupProfileImage()
         setupNameLabel()
         setupProfileLogin()
@@ -24,27 +25,51 @@ final class ProfileViewController: UIViewController {
         setupConstraints()
         
         addGradientAnimation()
-        
-        updateProfileDetails()
-        
-        profileImageServiceObserver = NotificationCenter.default
-            .addObserver(
-                forName: ProfileImageService.didChangeNotification,
-                object: nil,
-                queue: .main
-            ) { [weak self] _ in
-                guard let self = self else { return }
-                self.removeGradientAnimation()
-                self.updateAvatar()
-            }
-        updateAvatar()
+        presenter?.viewDidLoad()
     }
     
     @objc private func didTapLogoutButton() {
-        showLogoutAlert()
+        presenter?.didTapLogoutButton()
     }
     
-    private func showLogoutAlert() {
+    // MARK: - ProfileViewControllerProtocol
+    
+    func updateProfileDetails(name: String, loginName: String, bio: String?) {
+        nameLabel.text = name
+        loginLabel.text = loginName
+        descriptionLabel.text = bio
+    }
+    
+    func updateAvatar(with url: URL?, placeholder: UIImage) {
+        guard let url = url else { return }
+        
+        print("Загружаем аватарку по URL: \(url)")
+        
+        let processor = RoundCornerImageProcessor(cornerRadius: 35)
+        
+        imageView.kf.indicatorType = .activity
+        
+        imageView.kf.setImage(
+            with: url,
+            placeholder: placeholder,
+            options: [
+                .processor(processor),
+                .scaleFactor(UIScreen.main.scale),
+                .transition(.fade(0.2)),
+                .cacheOriginalImage
+            ]
+        ) { result in
+            switch result {
+            case .success(let value):
+                print("Аватарка успешно загружена: \(value.source)")
+                print("Тип кэша: \(value.cacheType)")
+            case .failure(let error):
+                print("Ошибка загрузки аватарки: \(error)")
+            }
+        }
+    }
+    
+    func showLogoutAlert() {
         let alert = UIAlertController(
             title: "Пока, пока!",
             message: "Уверены, что хотите выйти?",
@@ -52,7 +77,7 @@ final class ProfileViewController: UIViewController {
         )
         
         let logoutAction = UIAlertAction(title: "Да", style: .default) { [weak self] _ in
-            self?.performLogout()
+            self?.presenter?.didConfirmLogout()
         }
         
         let cancelAction = UIAlertAction(title: "Нет", style: .cancel)
@@ -63,10 +88,13 @@ final class ProfileViewController: UIViewController {
         present(alert, animated: true)
     }
     
-    private func performLogout() {
-        ProfileLogoutService.shared.logout()
+    func removeGradientAnimation() {
+        animationLayers.forEach { layer in
+            layer.removeFromSuperlayer()
+        }
+        animationLayers.removeAll()
     }
-    
+        
     private func addGradientAnimation() {
         let avatarGradient = createGradientLayer()
         avatarGradient.frame = CGRect(origin: .zero, size: CGSize(width: 70, height: 70))
@@ -116,72 +144,6 @@ final class ProfileViewController: UIViewController {
         return gradient
     }
     
-    private func removeGradientAnimation() {
-        animationLayers.forEach { layer in
-            layer.removeFromSuperlayer()
-        }
-        animationLayers.removeAll()
-    }
-        
-    private func updateProfileDetails() {
-        guard let profile = ProfileService.shared.profile else {
-            return
-        }
-        
-        removeGradientAnimation()
-        updateProfileDetails(profile: profile)
-    }
-    
-    private func updateProfileDetails(profile: Profile) {
-        nameLabel.text = profile.name.isEmpty
-        ? "Имя не указано"
-        : profile.name
-        loginLabel.text = profile.loginName.isEmpty
-        ? "@неизвестный_пользователь"
-        : profile.loginName
-        descriptionLabel.text = (profile.bio?.isEmpty ?? true)
-        ? "Профиль не заполнен"
-        : profile.bio
-    }
-    
-    private func updateAvatar() {
-        guard
-            let profileImageURL = ProfileImageService.shared.avatarURL,
-            let url = URL(string: profileImageURL)
-        else {
-            print("Аватарка недоступна")
-            return
-        }
-        
-        print("Загружаем аватарку по URL: \(url)")
-        
-        let placeholderImage = UIImage(resource: .avatar)
-            .withTintColor(.lightGray, renderingMode: .alwaysOriginal)
-        
-        let processor = RoundCornerImageProcessor(cornerRadius: 35)
-        
-        imageView.kf.indicatorType = .activity
-        
-        imageView.kf.setImage(
-            with: url,
-            placeholder: placeholderImage,
-            options: [
-                .processor(processor),
-                .scaleFactor(UIScreen.main.scale),
-                .transition(.fade(0.2)),
-                .cacheOriginalImage
-            ]
-        ) { result in
-            switch result {
-            case .success(let value):
-                print("Аватарка успешно загружена: \(value.source)")
-                print("Тип кэша: \(value.cacheType)")
-            case .failure(let error):
-                print("Ошибка загрузки аватарки: \(error)")
-            }
-        }
-    }
-        
     private func setupProfileImage() {
         let profileImage = UIImage(named: "avatar")
         imageView.image = profileImage

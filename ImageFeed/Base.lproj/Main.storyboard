@@ -176,6 +176,7 @@
                     <navigationItem key="navigationItem" id="2il-38-CEw"/>
                     <connections>
                         <outlet property="imageView" destination="tf6-YE-e9B" id="f4w-hn-RGg"/>
+                        <outlet property="navBackButton" destination="Woq-vV-tNT" id="Drx-p6-AwD"/>
                         <outlet property="scrollView" destination="8Ik-Cc-Exr" id="5pI-6G-Dn9"/>
                     </connections>
                 </viewController>
@@ -253,7 +254,7 @@
         <!--Web View View Controller-->
         <scene sceneID="Rhl-jI-baS">
             <objects>
-                <viewController id="VjP-a2-BR0" customClass="WebViewViewController" customModule="ImageFeed" customModuleProvider="target" sceneMemberID="viewController">
+                <viewController storyboardIdentifier="WebViewViewController" id="VjP-a2-BR0" customClass="WebViewViewController" customModule="ImageFeed" customModuleProvider="target" sceneMemberID="viewController">
                     <view key="view" contentMode="scaleToFill" id="YT5-Oy-b3c">
                         <rect key="frame" x="0.0" y="0.0" width="402" height="874"/>
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
